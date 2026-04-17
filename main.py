@@ -147,9 +147,13 @@ def set_config(config: Dict[str, Any], _api_key: Optional[str] = Depends(verify_
 def add_memory(memory_create: MemoryCreate, _api_key: Optional[str] = Depends(verify_api_key)):
     if not any([memory_create.user_id, memory_create.agent_id, memory_create.run_id]):
         raise HTTPException(status_code=400, detail="At least one identifier (user_id, agent_id, run_id) is required.")
-    params = {k: v for k, v in memory_create.model_dump().items() if v is not None and k != "messages"}
+    kwargs = {"messages": [m.model_dump() for m in memory_create.messages]}
+    for k in ("user_id", "agent_id", "run_id", "metadata", "infer", "memory_type", "prompt"):
+        v = getattr(memory_create, k, None)
+        if v is not None:
+            kwargs[k] = v
     try:
-        response = MEMORY_INSTANCE.add(messages=[m.model_dump() for m in memory_create.messages], **params)
+        response = MEMORY_INSTANCE.add(**kwargs)
         return JSONResponse(content=response)
     except Exception as e:
         logging.exception("Error in add_memory:")
@@ -165,10 +169,8 @@ def get_all_memories(
     if not any([user_id, run_id, agent_id]):
         raise HTTPException(status_code=400, detail="At least one identifier is required.")
     try:
-        params = {
-            k: v for k, v in {"user_id": user_id, "run_id": run_id, "agent_id": agent_id}.items() if v is not None
-        }
-        return MEMORY_INSTANCE.get_all(**params)
+        filters = {k: v for k, v in {"user_id": user_id, "run_id": run_id, "agent_id": agent_id}.items() if v is not None}
+        return MEMORY_INSTANCE.get_all(filters=filters)
     except Exception as e:
         logging.exception("Error in get_all_memories:")
         raise HTTPException(status_code=500, detail=str(e))
@@ -184,8 +186,17 @@ def get_memory(memory_id: str, _api_key: Optional[str] = Depends(verify_api_key)
 @app.post("/search", summary="Search memories")
 def search_memories(search_req: SearchRequest, _api_key: Optional[str] = Depends(verify_api_key)):
     try:
-        params = {k: v for k, v in search_req.model_dump().items() if v is not None and k != "query"}
-        return MEMORY_INSTANCE.search(query=search_req.query, **params)
+        filters = {}
+        for k in ("user_id", "run_id", "agent_id"):
+            v = getattr(search_req, k, None)
+            if v is not None:
+                filters[k] = v
+        kwargs = {"query": search_req.query, "filters": filters}
+        if search_req.top_k is not None:
+            kwargs["top_k"] = search_req.top_k
+        if search_req.threshold is not None:
+            kwargs["threshold"] = search_req.threshold
+        return MEMORY_INSTANCE.search(**kwargs)
     except Exception as e:
         logging.exception("Error in search_memories:")
         raise HTTPException(status_code=500, detail=str(e))
@@ -225,10 +236,8 @@ def delete_all_memories(
     if not any([user_id, run_id, agent_id]):
         raise HTTPException(status_code=400, detail="At least one identifier is required.")
     try:
-        params = {
-            k: v for k, v in {"user_id": user_id, "run_id": run_id, "agent_id": agent_id}.items() if v is not None
-        }
-        MEMORY_INSTANCE.delete_all(**params)
+        filters = {k: v for k, v in {"user_id": user_id, "run_id": run_id, "agent_id": agent_id}.items() if v is not None}
+        MEMORY_INSTANCE.delete_all(filters=filters)
         return {"message": "All relevant memories deleted"}
     except Exception as e:
         logging.exception("Error in delete_all_memories:")
