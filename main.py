@@ -9,6 +9,14 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
 
+import openai.resources.chat.completions as _oai_chat
+
+_original_create = _oai_chat.Completions.create
+def _patched_create(self, *args, **kwargs):
+    kwargs.pop("response_format", None)
+    return _original_create(self, *args, **kwargs)
+_oai_chat.Completions.create = _patched_create
+
 from mem0 import Memory
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
