@@ -169,8 +169,8 @@ def get_all_memories(
     if not any([user_id, run_id, agent_id]):
         raise HTTPException(status_code=400, detail="At least one identifier is required.")
     try:
-        params = {k: v for k, v in {"user_id": user_id, "run_id": run_id, "agent_id": agent_id}.items() if v is not None}
-        return MEMORY_INSTANCE.get_all(**params)
+        filters = {k: v for k, v in {"user_id": user_id, "run_id": run_id, "agent_id": agent_id}.items() if v is not None}
+        return MEMORY_INSTANCE.get_all(filters=filters)
     except Exception as e:
         logging.exception("Error in get_all_memories:")
         raise HTTPException(status_code=500, detail=str(e))
@@ -186,13 +186,16 @@ def get_memory(memory_id: str, _api_key: Optional[str] = Depends(verify_api_key)
 @app.post("/search", summary="Search memories")
 def search_memories(search_req: SearchRequest, _api_key: Optional[str] = Depends(verify_api_key)):
     try:
-        kwargs = {"query": search_req.query}
-        for k in ("user_id", "run_id", "agent_id", "top_k", "threshold"):
+        filters = {}
+        for k in ("user_id", "run_id", "agent_id"):
             v = getattr(search_req, k, None)
             if v is not None:
-                kwargs[k] = v
-        if search_req.filters:
-            kwargs["filters"] = search_req.filters
+                filters[k] = v
+        kwargs = {"query": search_req.query, "filters": filters}
+        if search_req.top_k is not None:
+            kwargs["top_k"] = search_req.top_k
+        if search_req.threshold is not None:
+            kwargs["threshold"] = search_req.threshold
         return MEMORY_INSTANCE.search(**kwargs)
     except Exception as e:
         logging.exception("Error in search_memories:")
@@ -233,8 +236,8 @@ def delete_all_memories(
     if not any([user_id, run_id, agent_id]):
         raise HTTPException(status_code=400, detail="At least one identifier is required.")
     try:
-        params = {k: v for k, v in {"user_id": user_id, "run_id": run_id, "agent_id": agent_id}.items() if v is not None}
-        MEMORY_INSTANCE.delete_all(**params)
+        filters = {k: v for k, v in {"user_id": user_id, "run_id": run_id, "agent_id": agent_id}.items() if v is not None}
+        MEMORY_INSTANCE.delete_all(filters=filters)
         return {"message": "All relevant memories deleted"}
     except Exception as e:
         logging.exception("Error in delete_all_memories:")
