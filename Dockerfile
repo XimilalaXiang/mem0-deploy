@@ -17,6 +17,8 @@ RUN pip install --no-cache-dir httpx
 
 COPY main.py .
 
+RUN mkdir -p /app/history
+
 EXPOSE 8000
 
 ENV PYTHONUNBUFFERED=1
