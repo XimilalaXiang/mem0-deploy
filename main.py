@@ -169,7 +169,8 @@ def get_all_memories(
     if not any([user_id, run_id, agent_id]):
         raise HTTPException(status_code=400, detail="At least one identifier is required.")
     try:
-        filters = {k: v for k, v in {"user_id": user_id, "run_id": run_id, "agent_id": agent_id}.items() if v is not None}
+        conditions = [{k: v} for k, v in {"user_id": user_id, "run_id": run_id, "agent_id": agent_id}.items() if v is not None]
+        filters = {"AND": conditions} if len(conditions) > 1 else conditions[0]
         return MEMORY_INSTANCE.get_all(filters=filters)
     except Exception as e:
         logging.exception("Error in get_all_memories:")
@@ -186,11 +187,12 @@ def get_memory(memory_id: str, _api_key: Optional[str] = Depends(verify_api_key)
 @app.post("/search", summary="Search memories")
 def search_memories(search_req: SearchRequest, _api_key: Optional[str] = Depends(verify_api_key)):
     try:
-        filters = {}
+        conditions = []
         for k in ("user_id", "run_id", "agent_id"):
             v = getattr(search_req, k, None)
             if v is not None:
-                filters[k] = v
+                conditions.append({k: v})
+        filters = {"AND": conditions} if len(conditions) > 1 else (conditions[0] if conditions else {})
         kwargs = {"query": search_req.query, "filters": filters}
         if search_req.top_k is not None:
             kwargs["top_k"] = search_req.top_k
@@ -236,7 +238,8 @@ def delete_all_memories(
     if not any([user_id, run_id, agent_id]):
         raise HTTPException(status_code=400, detail="At least one identifier is required.")
     try:
-        filters = {k: v for k, v in {"user_id": user_id, "run_id": run_id, "agent_id": agent_id}.items() if v is not None}
+        conditions = [{k: v} for k, v in {"user_id": user_id, "run_id": run_id, "agent_id": agent_id}.items() if v is not None]
+        filters = {"AND": conditions} if len(conditions) > 1 else conditions[0]
         MEMORY_INSTANCE.delete_all(filters=filters)
         return {"message": "All relevant memories deleted"}
     except Exception as e:
