@@ -40,7 +40,16 @@ POSTGRES_PASSWORD = os.environ.get("POSTGRES_PASSWORD", "postgres")
 POSTGRES_COLLECTION_NAME = os.environ.get("POSTGRES_COLLECTION_NAME", "memories")
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+OPENAI_BASE_URL = os.environ.get("OPENAI_BASE_URL")
+LLM_MODEL = os.environ.get("LLM_MODEL", "gpt-4.1-nano-2025-04-14")
+EMBEDDING_MODEL = os.environ.get("EMBEDDING_MODEL", "text-embedding-3-small")
 HISTORY_DB_PATH = os.environ.get("HISTORY_DB_PATH", "/app/history/history.db")
+
+llm_config = {"api_key": OPENAI_API_KEY, "temperature": 0.2, "model": LLM_MODEL}
+embedder_config = {"api_key": OPENAI_API_KEY, "model": EMBEDDING_MODEL}
+if OPENAI_BASE_URL:
+    llm_config["openai_base_url"] = OPENAI_BASE_URL
+    embedder_config["openai_base_url"] = OPENAI_BASE_URL
 
 DEFAULT_CONFIG = {
     "version": "v1.1",
@@ -55,8 +64,8 @@ DEFAULT_CONFIG = {
             "collection_name": POSTGRES_COLLECTION_NAME,
         },
     },
-    "llm": {"provider": "openai", "config": {"api_key": OPENAI_API_KEY, "temperature": 0.2, "model": "gpt-4.1-nano-2025-04-14"}},
-    "embedder": {"provider": "openai", "config": {"api_key": OPENAI_API_KEY, "model": "text-embedding-3-small"}},
+    "llm": {"provider": "openai", "config": llm_config},
+    "embedder": {"provider": "openai", "config": embedder_config},
     "history_db_path": HISTORY_DB_PATH,
 }
 
